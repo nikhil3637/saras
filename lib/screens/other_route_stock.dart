@@ -259,7 +259,6 @@ import 'package:saras/screens/other_route_demand.dart';
       return distance;
     }
 
-
     @override
     void initState() {
       super.initState();
