@@ -68,7 +68,7 @@ class _VisitInState extends State<VisitIn> {
                         if (newValue != null) {
                           selectedBoothId = newValue.id;
                           selectedBoothName = newValue.name;
-                          print('selectedBoothId=================$selectedBoothId');
+                          print('selectedBoothId at visit page=================$selectedBoothId');
                         } else {
                           selectedBoothId = null;
                         }
@@ -130,7 +130,7 @@ class _VisitInState extends State<VisitIn> {
     );
     if (response.statusCode == 200) {
       final List<dynamic> responseData = json.decode(response.body);
-      print('responseData get all booth =========$responseData');
+      print('responseData get all booth visit in page=========$responseData');
 
       setState(() {
         boothList = responseData.map((data) => GetAllBooth.fromJson(data)).toList();

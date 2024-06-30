@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:saras/constants/colors.dart';
 import 'package:saras/screens/daily_demand.dart';
 import 'package:saras/screens/daily_stock.dart';
+import 'package:saras/screens/login_screen.dart';
 import 'package:saras/screens/profile.dart';
 import 'package:saras/screens/visit_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'homescreen.dart';
-import 'other_route_demand.dart';
 import 'other_route_stock.dart';
 
 class HomePage extends StatefulWidget {
@@ -49,7 +50,56 @@ class _HomePageState extends State<HomePage> {
       Profile(loginData: widget.loginData)
     ];
     getData();
+    locationPermission();
   }
+
+   locationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text("Location Permission Required"),
+            content: Text("This app requires location permission to function properly. Please grant the permission."),
+            actions: <Widget>[
+              ElevatedButton(
+                child: Text("OK"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+                },
+              ),
+            ],
+          ),
+        );
+        permission = await Geolocator.requestPermission();
+      }else{
+        if (permission == LocationPermission.deniedForever) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              title: Text("Location Permission Required"),
+              content: Text("This app requires location permission to function properly. Please grant the permission."),
+              actions: <Widget>[
+                ElevatedButton(
+                  child: Text("OK"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+                  },
+                ),
+              ],
+            ),
+          );
+          permission = await Geolocator.requestPermission();
+        }
+      }
+    }
+  }
+
+
 
   void _onItemTapped(int index) {
     setState(() {

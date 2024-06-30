@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -8,8 +9,11 @@ import 'homepage.dart';
 
 class OtherRouteDemand extends StatefulWidget {
   final int userNo;
+  final String selectedBoothIdStockpage;
+  final  String selectedRoute;
+  final  String selectedBoothName;
   final List<dynamic> loginData;
-  const OtherRouteDemand({Key? key, required this.userNo, required this.loginData}) : super(key: key);
+  const OtherRouteDemand({Key? key, required this.userNo, required this.loginData, required this.selectedBoothIdStockpage, required this.selectedRoute, required this.selectedBoothName}) : super(key: key);
 
   @override
   State<OtherRouteDemand> createState() => _OtherRouteDemandState();
@@ -17,14 +21,159 @@ class OtherRouteDemand extends StatefulWidget {
 
 class _OtherRouteDemandState extends State<OtherRouteDemand> {
   List<DemandRoute> allRoutes = [];
-  DemandRoute? selectedRoute;
+   DemandRoute? selectedRoute;
   List<GetAllBoothOtherRouteDemand> boothList = [];
   GetAllBoothOtherRouteDemand? selectedBooth;
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+  final DateTime _selectedDate = DateTime.now();
+  final TimeOfDay _selectedTime = TimeOfDay.now();
   String? selectedBoothId;
   List<OtherDemandProduct> products = [];
 
+  @override
+  void initState() {
+    super.initState();
+    // fetchAllRoutes();
+    fetchDemandProducts(widget.selectedBoothIdStockpage,widget.userNo);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Other Route Demand Page'),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: (){
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => HomePage(loginData: widget.loginData)),
+                    (route) => false, // Removes all routes from the stack
+              );
+            },
+          ),
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('Selected Route = ${widget.selectedRoute}',style: TextStyle(fontSize: 14),),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('Selected Route = ${widget.selectedBoothName}',style: TextStyle(fontSize: 14),),
+            ),
+            // DropdownButton<DemandRoute>(
+            //   value: selectedRoute,
+            //   hint: const Text('Select Route'),
+            //   onChanged: (DemandRoute? newValue) {
+            //     setState(() {
+            //       selectedRoute = newValue!;
+            //       fetchBooths(newValue.routeId);
+            //                     });
+            //   },
+            //   items: allRoutes.map<DropdownMenuItem<DemandRoute>>((DemandRoute route) {
+            //     return DropdownMenuItem<DemandRoute>(
+            //       value: route,
+            //       child: Text(route.routeName),
+            //     );
+            //   }).toList(),
+            // ),
+            // Padding(
+            //   padding: const EdgeInsets.all(16.0),
+            //   child: DropdownButton(
+            //     value: selectedBooth,
+            //     hint: Text('Select Booth'),
+            //     onChanged: (dynamic newValue) {
+            //       setState(() {
+            //         selectedBooth = newValue;
+            //         if (newValue != null) {
+            //           selectedBoothId = newValue.id;
+            //           print('selectedBoothId for other routes demand=================$selectedBoothId');
+            //           fetchDemandProducts(selectedBoothId,widget.userNo);
+            //         }
+            //       });
+            //     },
+            //     items: boothList.map<DropdownMenuItem<GetAllBoothOtherRouteDemand>>((GetAllBoothOtherRouteDemand booth) {
+            //       return DropdownMenuItem<GetAllBoothOtherRouteDemand>(
+            //         value: booth,
+            //         child: Text(booth.name),
+            //       );
+            //     }).toList(),
+            //   ),
+            // ),
+            SizedBox(height: 10),
+            Expanded(
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height - 200,
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      OtherDemandProduct product = products[index];
+                      TextEditingController quantityController =
+                      TextEditingController(text: product.demandQty.toString());
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                        child: Row(
+                          children: [
+                            Text('${index + 1}.'),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                product.itemName,
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            SizedBox(
+                              width: 100,
+                              child: TextField(
+                                controller: quantityController,
+                                onChanged: (value) {
+                                  products[index].demandQty = int.parse(value);
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'Quantity',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Center(
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(AppColors.primaryColor),
+                  ),
+                  onPressed: () {
+                    saveDemand(widget.selectedBoothIdStockpage);
+                  },
+                  child: Text(
+                    'Save',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Future<void> fetchAllRoutes() async {
     final response = await http.post(
         Uri.parse('http://183.83.176.150:81/api/GetAllRoute'),
@@ -63,7 +212,9 @@ class _OtherRouteDemandState extends State<OtherRouteDemand> {
     }
   }
 
-  Future<void> fetchDemandProducts(boothId) async {
+  Future<void> fetchDemandProducts(boothId,salesManId) async {
+    print('boothid fetch demand product =======$boothId');
+    print('salesManId fetch demand product =======$salesManId');
     final response = await http.post(
       Uri.parse('http://183.83.176.150:81/api/GetBoothWiseDemand'),
       headers: <String, String>{
@@ -72,6 +223,7 @@ class _OtherRouteDemandState extends State<OtherRouteDemand> {
       body: jsonEncode(<String, dynamic>{
         'DemandDate': DateFormat('dd-MMM-yyyy').format(DateTime.now()),
         'BoothId': boothId,
+        'SalesManId': salesManId,
       }),
     );
     if (response.statusCode == 200) {
@@ -135,17 +287,10 @@ class _OtherRouteDemandState extends State<OtherRouteDemand> {
     // Fetch current location
     Position? position = await _getCurrentLocation();
     if (position != null) {
-      print("latitude at out ==================${position.latitude}");
-      print("longitude at out ==================${position.longitude}");
-      print("userno at out ==================${widget.userNo}");
-      print("userno at out ==================${widget.userNo}");
       final DateFormat dateFormat = DateFormat('dd-MMM-yyyy');
       final DateFormat timeFormat = DateFormat('HH:mm'); // 24-hour format
-
       final String formattedDate = dateFormat.format(_selectedDate);
       final String formattedTime = timeFormat.format(DateTime(2024, 1, 1, _selectedTime.hour, _selectedTime.minute));
-      print("attntime on other route==================${formattedTime}");
-      print("attdate on other route==================${formattedDate}");
 
       final response = await http.post(
         Uri.parse('http://183.83.176.150:81/api/AttendanceIn'),
@@ -154,7 +299,7 @@ class _OtherRouteDemandState extends State<OtherRouteDemand> {
         },
         body: jsonEncode(<String, dynamic>{
           'UserNo': widget.userNo,
-          'BoothId': selectedBoothId,
+          'BoothId': widget.selectedBoothIdStockpage,
           'AttnInDate': formattedDate,
           'AttnInTime': formattedTime,
           'latitude': position.latitude.toString(),
@@ -207,143 +352,55 @@ class _OtherRouteDemandState extends State<OtherRouteDemand> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchAllRoutes();
+  double _calculateDistance(
+      double startLatitude, double startLongitude, double endLatitude, double endLongitude) {
+    const R = 6371000.0; // Radius of the Earth in meters
+    double phi1 = startLatitude * pi / 180.0;
+    double phi2 = endLatitude * pi / 180.0;
+    double deltaPhi = (endLatitude - startLatitude) * pi / 180.0;
+    double deltaLambda = (endLongitude - startLongitude) * pi / 180.0;
+
+    double a = sin(deltaPhi / 2) * sin(deltaPhi / 2) +
+        cos(phi1) * cos(phi2) * sin(deltaLambda / 2) * sin(deltaLambda / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    double distance = R * c;
+    return distance;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Other Route Demand Page'),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: (){
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => HomePage(loginData: widget.loginData)),
-                    (route) => false, // Removes all routes from the stack
-              );
-            },
-          ),
-        ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DropdownButton<DemandRoute>(
-              value: selectedRoute,
-              hint: const Text('Select Route'),
-              onChanged: (DemandRoute? newValue) {
-                setState(() {
-                  selectedRoute = newValue;
-                  if (newValue != null) {
-                    fetchBooths(newValue.routeId);
-                  }
-                });
-              },
-              items: allRoutes.map<DropdownMenuItem<DemandRoute>>((DemandRoute route) {
-                return DropdownMenuItem<DemandRoute>(
-                  value: route,
-                  child: Text(route.routeName),
-                );
-              }).toList(),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: DropdownButton(
-                value: selectedBooth,
-                hint: Text('Select Booth'),
-                onChanged: (dynamic newValue) {
-                  setState(() {
-                    selectedBooth = newValue;
-                    if (newValue != null) {
-                      selectedBoothId = newValue.id;
-                      print('selectedBoothId for other routes demand=================$selectedBoothId');
-                      fetchDemandProducts(selectedBooth?.id);
-                    }
-                  });
-                },
-                items: boothList.map<DropdownMenuItem<GetAllBoothOtherRouteDemand>>((GetAllBoothOtherRouteDemand booth) {
-                  return DropdownMenuItem<GetAllBoothOtherRouteDemand>(
-                    value: booth,
-                    child: Text(booth.name),
-                  );
-                }).toList(),
-              ),
-            ),
-            SizedBox(height: 10),
-            Expanded(
-              child: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height - 200,
-                  ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      OtherDemandProduct product = products[index];
-                      TextEditingController quantityController =
-                      TextEditingController(text: product.demandQty.toString());
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                        child: Row(
-                          children: [
-                            Text('${index + 1}.'),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                product.itemName,
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            SizedBox(
-                              width: 100,
-                              child: TextField(
-                                controller: quantityController,
-                                onChanged: (value) {
-                                  products[index].demandQty = int.parse(value);
-                                },
-                                decoration: InputDecoration(
-                                  labelText: 'Quantity',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Center(
-                child: ElevatedButton(
-                  style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all<Color>(AppColors.primaryColor),
-                  ),
+  Future<void> _checkDistance(double boothLatitude, double boothLongitude) async {
+    Position? currentPosition = await _getCurrentLocation();
+    if (currentPosition != null) {
+      double distance = _calculateDistance(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        boothLatitude,
+        boothLongitude,
+      );
+      print("Distance to selected booth: $distance meters");
+      if (distance <= 50) {
+      } else {
+        // Show dialog if distance is greater than 50 meters
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Distance Exceeded'),
+              content: Text('You are more than 50 meters away from the selected booth.'),
+              actions: <Widget>[
+                TextButton(
                   onPressed: () {
-                    saveDemand(selectedBooth?.id);
+                    Navigator.of(context).pop();
                   },
-                  child: Text(
-                    'Save',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text('OK'),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+              ],
+            );
+          },
+        );
+      }
+    } else {
+      // Handle case when current location is not available
+    }
   }
 }
 class DemandRoute {
@@ -359,6 +416,7 @@ class DemandRoute {
     );
   }
 }
+
 class OtherDemandProduct {
   final int itemId;
   final String itemName;
@@ -378,6 +436,7 @@ class OtherDemandProduct {
     );
   }
 }
+
 class GetAllBoothOtherRouteDemand{
   String id;
   String name;

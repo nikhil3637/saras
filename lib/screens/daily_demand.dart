@@ -27,7 +27,35 @@ class _DailyDemandState extends State<DailyDemand> {
   @override
   void initState() {
     super.initState();
-    fetchProducts(widget.selectedDate,widget.boothId,widget.userNo);
+    Future.delayed(Duration(milliseconds: 200), () {
+      checkAttendance();
+      fetchProducts(widget.selectedDate, widget.boothId, widget.userNo);
+    });
+  }
+
+
+  void checkAttendance() {
+    DateTime currentDate = DateTime.now();
+    if (widget.selectedDate != currentDate) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Attendance Required'),
+            content: Text('Please mark your attendance first.'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Navigate to the attendance screen or perform any necessary action
+                },
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   @override

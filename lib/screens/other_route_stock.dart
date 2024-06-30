@@ -21,8 +21,8 @@ import 'package:saras/screens/other_route_demand.dart';
   class _OtherRouteStockState extends State<OtherRouteStock> {
     List<Route> allRoutes = [];
     Route? selectedRoute;
-    DateTime _selectedDate = DateTime.now();
-    TimeOfDay _selectedTime = TimeOfDay.now();
+    final DateTime _selectedDate = DateTime.now();
+    final TimeOfDay _selectedTime = TimeOfDay.now();
     List<GetAllBoothOtherRoute> boothList = [];
     GetAllBoothOtherRoute? selectedBooth;
     String? selectedBoothId;
@@ -62,6 +62,7 @@ import 'package:saras/screens/other_route_demand.dart';
         print("all booths response data====================$responseData");
         setState(() {
           boothList = responseData.map((data) => GetAllBoothOtherRoute.fromJson(data)).toList();
+          print('botthlistttt======$boothList');
         });
       } else {
         // Handle API call failure
@@ -69,7 +70,8 @@ import 'package:saras/screens/other_route_demand.dart';
     }
 
     Future<void> fetchStockProducts(boothId,salesManId) async {
-      print('userno on fetch   stock page ======${salesManId}');
+      print('boothid  fetchStockProducts  =======$boothId');
+      print('salesManId  fetchStockProducts  =======$salesManId');
       final response = await http.post(
         Uri.parse('http://183.83.176.150:81/api/GetBoothStock'),
         headers: <String, String>{
@@ -131,7 +133,7 @@ import 'package:saras/screens/other_route_demand.dart';
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => OtherRouteDemand(userNo: widget.userNo, loginData: widget.loginData)),
+                      MaterialPageRoute(builder: (context) => OtherRouteDemand(userNo: widget.userNo, loginData: widget.loginData, selectedBoothIdStockpage: selectedBoothId.toString(), selectedRoute:selectedRoute!.routeName, selectedBoothName: selectedBooth!.name.toString(),)),
                           (route) => false, // Removes all routes from the stack
                     );
                   },
@@ -153,17 +155,10 @@ import 'package:saras/screens/other_route_demand.dart';
         // Fetch current location
         Position? position = await _getCurrentLocation();
         if (position != null) {
-            print("latitude==================${position.latitude}");
-            print("longitude==================${position.longitude}");
-            print("userno on other ==================${widget.userNo}");
-            print("Boothid on other stock==================${selectedBoothId}");
             final DateFormat dateFormat = DateFormat('dd-MMM-yyyy');
             final DateFormat timeFormat = DateFormat('HH:mm'); // 24-hour format
-
             final String formattedDate = dateFormat.format(_selectedDate);
             final String formattedTime = timeFormat.format(DateTime(2024, 1, 1, _selectedTime.hour, _selectedTime.minute));
-            print("attntime==================${formattedTime}");
-            print("attdate==================${formattedDate}");
             final response = await http.post(
               Uri.parse('http://183.83.176.150:81/api/AttendanceIn'),
               headers: <String, String>{
@@ -181,7 +176,6 @@ import 'package:saras/screens/other_route_demand.dart';
             );
             if (response.statusCode == 200) {
               print('Visit saved successfully');
-              // Navigate to DailyDemand page only if visit is successfully saved
             } else {
               print('Failed to save visit with status code ${response.statusCode}');
             }
@@ -294,30 +288,33 @@ import 'package:saras/screens/other_route_demand.dart';
                 );
               }).toList(),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: DropdownButton(
-                value: selectedBooth,
-                hint: Text('Select Booth'),
-                onChanged: (dynamic newValue) {
-                  setState(() {
-                    selectedBooth = newValue;
-                    if (newValue != null) {
-                      selectedBoothId = newValue.id;
-                      print('selectedBoothId for other routes=================$selectedBoothId');
-                      fetchStockProducts(selectedBooth?.id, widget.userNo);
-                    }
-                  });
-                },
-                items: boothList.map<DropdownMenuItem<GetAllBoothOtherRoute>>((GetAllBoothOtherRoute booth) {
-                  return DropdownMenuItem<GetAllBoothOtherRoute>(
-                    value: booth,
-                    child: Text(booth.name), // Accessing name property directly
-                  );
-                }).toList(),
-              ),
+          // Inside the build method
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: DropdownButton(
+              value: selectedBooth,
+              hint: Text('Select Booth'),
+              onChanged: (dynamic newValue) async {
+                setState(() {
+                  selectedBooth = newValue;
+                  if (newValue != null) {
+                    selectedBoothId = newValue.id;
+                    print('selectedBoothId for other routes=================$selectedBoothId');
+                    // Fetch stock products
+                    fetchStockProducts(selectedBooth?.id, widget.userNo);
+                  }
+                });
+              },
+              items: boothList.map<DropdownMenuItem<GetAllBoothOtherRoute>>((GetAllBoothOtherRoute booth) {
+                return DropdownMenuItem<GetAllBoothOtherRoute>(
+                  value: booth,
+                  child: Text(booth.name), // Accessing name property directly
+                );
+              }).toList(),
             ),
-            SizedBox(height: 10),
+          ),
+
+      SizedBox(height: 10),
             Expanded(
               child: SingleChildScrollView(
                 child: ConstrainedBox(

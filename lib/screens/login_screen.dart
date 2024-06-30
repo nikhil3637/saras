@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 20.0),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                      primary: AppColors.primaryColor
+
                   ),
                   onPressed: () {
                     loginUser(_mobileController.text);
@@ -200,6 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
+
                   },
                   child: Text("OK"),
                 ),

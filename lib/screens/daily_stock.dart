@@ -31,7 +31,34 @@ class _DailyStockPageState extends State<DailyStockPage> {
   @override
   void initState() {
     super.initState();
-    fetchStockProducts(widget.selectedDate,widget.boothId,widget.userNo);
+    Future.delayed(Duration(milliseconds: 200), () {
+      checkAttendance();
+      fetchStockProducts(widget.selectedDate, widget.boothId, widget.userNo);
+    });
+  }
+
+  void checkAttendance() {
+    DateTime currentDate = DateTime.now();
+    if (widget.selectedDate != currentDate) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Attendance Required'),
+            content: Text('Please mark your attendance first.'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Navigate to the attendance screen or perform any necessary action
+                },
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   Future<void> fetchStockProducts(demandDate,boothId,salesManId) async {
